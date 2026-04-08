@@ -9,6 +9,18 @@
 const SUPABASE_URL  = 'https://bgykdjqzgiybfcbvjeps.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJneWtkanF6Z2l5YmZjYnZqZXBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NjE0MDAsImV4cCI6MjA5MTEzNzQwMH0.IATiAiXCa460jRluFVYYKOGsIAvV3L_7_TwsWw6NHOA';
 
+// Create the client
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: {
+    persistSession: true,           // important
+    autoRefreshToken: true,
+    detectSessionInUrl: true        // helps after magic link redirect
+  }
+});
+
+// Your existing functions (sendMagicLink, adminCreateAuthUser, etc.) stay the same
+// Just make sure they are at the bottom
+
 // ---------------------------------------------------------------
 // Load the Supabase JS v2 client from CDN (included via <script>
 // tag in each HTML file — do not import here again).
