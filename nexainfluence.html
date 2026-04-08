@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexaInfluence — Influencer Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js" defer></script>
+  <style>
+    :root {
+      --g1: #01875f;
+      --g2: #00ac6d;
+      --g3: #00d48a;
+      --g-dark: #00654a;
+      --g-light: #e6f7f1;
+      --g-pale: #f0faf6;
+      --white: #ffffff;
+      --bg: #f7faf9;
+      --ink: #0d1f1a;
+      --ink2: #3a5046;
+      --ink3: #6b8a7d;
+      --border: #c8e6d8;
+      --shadow-sm: 0 2px 8px rgba(1,135,95,.08);
+      --shadow-md: 0 8px 32px rgba(1,135,95,.14);
+      --shadow-lg: 0 20px 60px rgba(1,135,95,.18);
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+    /* ── NAV ── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 64px;
+      background: rgba(255,255,255,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { display: flex; align-items: center; gap: .5rem; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; color: var(--g1); text-decoration: none; }
+    .nav-logo svg { width: 32px; height: 32px; }
+    .nav-links { display: flex; align-items: center; gap: 1rem; }
+    .nav-btn { padding: .45rem 1.2rem; border-radius: 50px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; border: none; }
+    .nav-btn-ghost { background: transparent; color: var(--g1); border: 1.5px solid var(--g1); }
+    .nav-btn-ghost:hover { background: var(--g-light); }
+    .nav-btn-solid { background: var(--g1); color: #fff; }
+    .nav-btn-solid:hover { background: var(--g-dark); }
+
+    /* ── PAGE SYSTEM ── */
+    .page { display: none; padding-top: 64px; }
+    .page.active { display: block; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 92vh; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #f0faf6 0%, #e6f7f1 50%, #d0f0e4 100%);
+      position: relative; overflow: hidden; padding: 4rem 2rem;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -120px; right: -120px;
+      width: 500px; height: 500px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,172,109,.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: ''; position: absolute; bottom: -80px; left: -80px;
+      width: 360px; height: 360px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(1,135,95,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-inner { max-width: 640px; text-align: center; position: relative; z-index: 1; }
+    .hero-badge { display: inline-flex; align-items: center; gap: .4rem; padding: .4rem 1rem; background: rgba(1,135,95,.1); color: var(--g1); border-radius: 50px; font-size: .8rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 1.5rem; border: 1px solid rgba(1,135,95,.2); }
+    .hero h1 { font-family: 'Syne', sans-serif; font-size: clamp(2.4rem, 5vw, 3.8rem); font-weight: 800; line-height: 1.1; color: var(--ink); margin-bottom: 1.2rem; }
+    .hero h1 span { color: var(--g1); }
+    .hero p { font-size: 1.1rem; color: var(--ink2); line-height: 1.7; margin-bottom: 2.5rem; }
+    .hero-cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary { display: inline-flex; align-items: center; gap: .5rem; padding: .85rem 2rem; background: var(--g1); color: #fff; border-radius: 50px; font-weight: 600; font-size: .95rem; border: none; cursor: pointer; transition: all .2s; box-shadow: 0 4px 16px rgba(1,135,95,.35); text-decoration: none; }
+    .btn-primary:hover { background: var(--g-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(1,135,95,.4); }
+    .btn-outline { display: inline-flex; align-items: center; gap: .5rem; padding: .85rem 2rem; background: transparent; color: var(--g1); border: 2px solid var(--g1); border-radius: 50px; font-weight: 600; font-size: .95rem; cursor: pointer; transition: all .2s; text-decoration: none; }
+    .btn-outline:hover { background: var(--g-light); transform: translateY(-2px); }
+
+    /* ── STATS STRIP ── */
+    .stats-strip { background: var(--g1); padding: 2.5rem 2rem; }
+    .stats-strip-inner { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 2rem; text-align: center; }
+    .stat-item .stat-num { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; color: #fff; }
+    .stat-item .stat-label { font-size: .85rem; color: rgba(255,255,255,.75); margin-top: .2rem; }
+
+    /* ── BENEFITS ── */
+    .section { padding: 5rem 2rem; }
+    .section-inner { max-width: 1000px; margin: 0 auto; }
+    .section-tag { display: inline-block; padding: .3rem .9rem; background: var(--g-light); color: var(--g1); border-radius: 50px; font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1rem; }
+    .section-title { font-family: 'Syne', sans-serif; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; color: var(--ink); margin-bottom: .8rem; }
+    .section-sub { color: var(--ink2); font-size: 1rem; line-height: 1.7; max-width: 560px; margin-bottom: 3rem; }
+    .benefits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1.5rem; }
+    .benefit-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.8rem; transition: all .25s; }
+    .benefit-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--g2); }
+    .benefit-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--g-light); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 1rem; }
+    .benefit-card h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; color: var(--ink); margin-bottom: .5rem; }
+    .benefit-card p { font-size: .9rem; color: var(--ink2); line-height: 1.6; }
+
+    /* ── HOW IT WORKS ── */
+    .how-section { background: var(--g-pale); }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 2rem; }
+    .step { text-align: center; }
+    .step-num { width: 52px; height: 52px; border-radius: 50%; background: var(--g1); color: #fff; font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+    .step h3 { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--ink); margin-bottom: .4rem; }
+    .step p { font-size: .88rem; color: var(--ink2); line-height: 1.6; }
+
+    /* ── APPLICATION FORM ── */
+    .apply-section { background: #fff; }
+    .form-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 2.5rem; max-width: 680px; margin: 0 auto; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    @media(max-width:600px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-group { display: flex; flex-direction: column; gap: .4rem; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-label { font-size: .82rem; font-weight: 600; color: var(--ink2); text-transform: uppercase; letter-spacing: .04em; }
+    .form-input, .form-select, .form-textarea {
+      padding: .75rem 1rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif; font-size: .95rem; color: var(--ink);
+      background: #fff; outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    .form-textarea { resize: vertical; min-height: 100px; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--g1); box-shadow: 0 0 0 3px rgba(1,135,95,.12); }
+    .submit-btn { width: 100%; padding: 1rem; background: var(--g1); color: #fff; border: none; border-radius: 50px; font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all .2s; margin-top: .8rem; }
+    .submit-btn:hover { background: var(--g-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(1,135,95,.35); }
+    .submit-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--ink); color: #fff; padding: 1rem 1.5rem; border-radius: var(--radius-sm); font-size: .9rem; font-weight: 500; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all .35s cubic-bezier(.34,1.56,.64,1); max-width: 340px; box-shadow: var(--shadow-lg); }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-left: 4px solid var(--g2); }
+    .toast.error { border-left: 4px solid #e53e3e; }
+
+    /* ── ADMIN PANEL ── */
+    .admin-section { background: var(--bg); min-height: 100vh; }
+    .admin-header-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1.5rem 0; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); }
+    .admin-header-bar h2 { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; color: var(--g1); }
+    .admin-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+    .btn-sm { padding: .5rem 1.1rem; border-radius: 50px; font-size: .82rem; font-weight: 600; border: none; cursor: pointer; transition: all .2s; }
+    .btn-sm-green { background: var(--g1); color: #fff; }
+    .btn-sm-green:hover { background: var(--g-dark); }
+    .btn-sm-outline { background: transparent; color: var(--g1); border: 1.5px solid var(--g1); }
+    .btn-sm-outline:hover { background: var(--g-light); }
+
+    .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .admin-stat-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.2rem; text-align: center; }
+    .admin-stat-card .num { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--g1); }
+    .admin-stat-card .lbl { font-size: .78rem; color: var(--ink3); margin-top: .2rem; }
+
+    /* Email panel */
+    .email-panel { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.8rem; margin-bottom: 2rem; }
+    .email-panel h3 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--g1); margin-bottom: 1.2rem; }
+    .email-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; align-items: end; }
+    @media(max-width:720px) { .email-row { grid-template-columns: 1fr; } }
+
+    /* Applications table */
+    .applications-panel { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .panel-header h3 { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--ink); }
+    .filter-tabs { display: flex; gap: .4rem; }
+    .filter-tab { padding: .3rem .8rem; border-radius: 50px; font-size: .78rem; font-weight: 600; border: 1.5px solid var(--border); background: transparent; color: var(--ink3); cursor: pointer; transition: all .15s; }
+    .filter-tab.active, .filter-tab:hover { border-color: var(--g1); color: var(--g1); background: var(--g-light); }
+    .app-table { width: 100%; border-collapse: collapse; }
+    .app-table th { padding: .8rem 1rem; text-align: left; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink3); background: var(--bg); border-bottom: 1px solid var(--border); }
+    .app-table td { padding: .85rem 1rem; font-size: .88rem; border-bottom: 1px solid var(--g-pale); vertical-align: middle; }
+    .app-table tr:last-child td { border-bottom: none; }
+    .app-table tr:hover td { background: var(--g-pale); }
+    .table-wrap { overflow-x: auto; }
+    .badge { display: inline-flex; align-items: center; padding: .25rem .7rem; border-radius: 50px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .badge-pending { background: #fff8e1; color: #f59e0b; }
+    .badge-approved { background: var(--g-light); color: var(--g1); }
+    .badge-rejected { background: #fef2f2; color: #e53e3e; }
+    .action-btns { display: flex; gap: .4rem; }
+    .act-btn { padding: .28rem .7rem; border-radius: 6px; font-size: .75rem; font-weight: 600; border: none; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .act-approve { background: var(--g-light); color: var(--g1); }
+    .act-approve:hover { background: var(--g1); color: #fff; }
+    .act-reject { background: #fef2f2; color: #e53e3e; }
+    .act-reject:hover { background: #e53e3e; color: #fff; }
+    .act-delete { background: #f1f5f9; color: var(--ink3); }
+    .act-delete:hover { background: var(--ink3); color: #fff; }
+    .empty-state { text-align: center; padding: 3rem; color: var(--ink3); }
+    .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: .8rem; }
+
+    /* ── LOGIN PAGE ── */
+    .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--g-pale), var(--g-light)); }
+    .login-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 2.5rem; width: 100%; max-width: 380px; box-shadow: var(--shadow-md); }
+    .login-card h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--ink); margin-bottom: .4rem; }
+    .login-card p { font-size: .9rem; color: var(--ink3); margin-bottom: 1.8rem; }
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:640px) {
+      .nav { padding: 0 1rem; }
+      .section { padding: 3rem 1.2rem; }
+      .form-card { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a class="nav-logo" href="#" onclick="showPage('landing'); return false;">
+    <svg viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill="#01875f"/>
+      <path d="M8 20 L14 12 L18 17 L22 10 L26 16" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="8" cy="20" r="2" fill="white"/>
+    </svg>
+    NexaInfluence
+  </a>
+  <div class="nav-links">
+    <button class="nav-btn nav-btn-ghost" onclick="showPage('login')">Admin</button>
+    <a href="nexainfluence-dashboard.html" class="nav-btn nav-btn-solid">Influencer Login</a>
+  </div>
+</nav>
+
+<!-- ══════════════════ LANDING PAGE ══════════════════ -->
+<div id="page-landing" class="page active">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">⚡ Earn While You Influence</div>
+      <h1>Turn Your Audience Into <span>Real Earnings</span></h1>
+      <p>Join the NexaSphere influencer programme. Share personalised referral codes, earn commissions on every sale, and get paid — directly to your account.</p>
+      <div class="hero-cta">
+        <button class="btn-primary" onclick="scrollToApply()">Apply Now →</button>
+        <button class="btn-outline" onclick="scrollTo({top:document.querySelector('.how-section').offsetTop - 64, behavior:'smooth'})">How it Works</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats strip -->
+  <div class="stats-strip">
+    <div class="stats-strip-inner">
+      <div class="stat-item"><div class="stat-num">200+</div><div class="stat-label">Active creators</div></div>
+      <div class="stat-item"><div class="stat-num">15–25%</div><div class="stat-label">Commission rate</div></div>
+      <div class="stat-item"><div class="stat-num">48h</div><div class="stat-label">Approval time</div></div>
+    </div>
+  </div>
+
+  <!-- Benefits -->
+  <section class="section">
+    <div class="section-inner">
+      <span class="section-tag">Why Join</span>
+      <h2 class="section-title">Built for creators who mean business</h2>
+      <p class="section-sub">Everything you need to earn consistently — from your first code to your first payout.</p>
+      <div class="benefits-grid">
+        <div class="benefit-card"><div class="benefit-icon">💸</div><h3>Competitive Commissions</h3><p>Earn 15–25% on every sale driven by your unique referral codes. The more you share, the more you earn.</p></div>
+        <div class="benefit-card"><div class="benefit-icon">🔑</div><h3>Custom Referral Codes</h3><p>Get personalised codes that match your brand. Your audience gets a discount, you get a commission.</p></div>
+        <div class="benefit-card"><div class="benefit-icon">📊</div><h3>Real-time Dashboard</h3><p>Track your clicks, conversions, and earnings in one clean dashboard — always up to date.</p></div>
+        <div class="benefit-card"><div class="benefit-icon">💳</div><h3>Flexible Payouts</h3><p>Receive payments via PayPal or direct bank transfer. Add your details in seconds from your dashboard.</p></div>
+        <div class="benefit-card"><div class="benefit-icon">🚀</div><h3>Fast Approval</h3><p>Applications reviewed within 48 hours. Once approved, your codes go live immediately.</p></div>
+        <div class="benefit-card"><div class="benefit-icon">🤝</div><h3>Dedicated Support</h3><p>A real team behind you. Need help or a custom deal? We're always reachable.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section how-section">
+    <div class="section-inner">
+      <span class="section-tag">The Process</span>
+      <h2 class="section-title">Four steps to your first payout</h2>
+      <p class="section-sub">Simple, transparent, and fast — from application to earning.</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><h3>Apply</h3><p>Fill in the form below. Tell us about your platform, audience, and why you'd be a great fit.</p></div>
+        <div class="step"><div class="step-num">2</div><h3>Get Approved</h3><p>We review your application within 48 hours and send you a magic link to access your dashboard.</p></div>
+        <div class="step"><div class="step-num">3</div><h3>Share Codes</h3><p>Your unique referral codes appear in your dashboard. Share them anywhere your audience is.</p></div>
+        <div class="step"><div class="step-num">4</div><h3>Get Paid</h3><p>Earnings accumulate automatically. Request a payout once you hit the minimum threshold.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Application Form -->
+  <section class="section apply-section" id="apply-section">
+    <div class="section-inner">
+      <span class="section-tag">Join the Programme</span>
+      <h2 class="section-title">Apply as an Influencer</h2>
+      <p class="section-sub">Takes less than 3 minutes. We'll get back to you within 48 hours.</p>
+
+      <div class="form-card">
+        <form id="applyForm" onsubmit="submitApplication(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Full Name *</label>
+              <input class="form-input" id="app-name" type="text" placeholder="Your full name" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Address *</label>
+              <input class="form-input" id="app-email" type="email" placeholder="you@email.com" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone Number</label>
+              <input class="form-input" id="app-phone" type="tel" placeholder="+234 800 000 0000" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Social Handle *</label>
+              <input class="form-input" id="app-handle" type="text" placeholder="@yourhandle" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Primary Platform *</label>
+              <select class="form-select" id="app-platform" required>
+                <option value="">Select platform…</option>
+                <option>Instagram</option>
+                <option>TikTok</option>
+                <option>YouTube</option>
+                <option>Twitter / X</option>
+                <option>Facebook</option>
+                <option>LinkedIn</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Follower Count *</label>
+              <select class="form-select" id="app-followers" required>
+                <option value="">Select range…</option>
+                <option value="1000">1,000 – 5,000</option>
+                <option value="5000">5,000 – 20,000</option>
+                <option value="20000">20,000 – 100,000</option>
+                <option value="100000">100,000 – 500,000</option>
+                <option value="500000">500,000+</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Profile / Channel Link *</label>
+              <input class="form-input" id="app-link" type="url" placeholder="https://instagram.com/yourhandle" required />
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Why do you want to join? *</label>
+              <textarea class="form-textarea" id="app-reason" placeholder="Tell us about your audience and how you'd promote NexaSphere…" required></textarea>
+            </div>
+          </div>
+          <button type="submit" class="submit-btn" id="applyBtn">Submit Application →</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /landing -->
+
+
+<!-- ══════════════════ ADMIN LOGIN PAGE ══════════════════ -->
+<div id="page-login" class="page">
+  <div class="login-page">
+    <div class="login-card">
+      <h2>Admin Access</h2>
+      <p>Enter the admin password to manage applications and influencers.</p>
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label class="form-label">Password</label>
+        <input class="form-input" id="adminPasswordInput" type="password" placeholder="Enter admin password"
+               onkeydown="if(event.key==='Enter') adminLogin()" />
+      </div>
+      <button class="submit-btn" onclick="adminLogin()">Access Admin Panel →</button>
+      <p style="text-align:center;margin-top:1rem;font-size:.82rem;color:var(--ink3);">
+        <a href="#" onclick="showPage('landing');return false;" style="color:var(--g1);">← Back to Hub</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════ ADMIN PANEL ══════════════════ -->
+<div id="page-admin" class="page">
+  <section class="section admin-section">
+    <div class="section-inner">
+
+      <div class="admin-header-bar">
+        <h2>NexaInfluence Admin</h2>
+        <div class="admin-actions">
+          <button class="btn-sm btn-sm-outline" onclick="showPage('landing')">← Back to Hub</button>
+          <button class="btn-sm btn-sm-green" onclick="generateCodesForAll()">🔑 Generate Codes</button>
+          <button class="btn-sm btn-sm-outline" onclick="exportCSV()">⬇ Export CSV</button>
+          <button class="btn-sm btn-sm-outline" onclick="adminLogout()">Logout</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="admin-stats" id="adminStats"></div>
+
+      <!-- Email Panel -->
+      <div class="email-panel">
+        <h3>📧 Send Email to Influencer</h3>
+        <div class="email-row">
+          <div class="form-group">
+            <label class="form-label">Recipient</label>
+            <select class="form-select" id="emailRecipient">
+              <option value="">Select approved influencer…</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Template</label>
+            <select class="form-select" id="emailTemplate">
+              <option value="welcome">Welcome — Account Approved</option>
+              <option value="codes">Your Referral Codes Are Ready</option>
+              <option value="payment">Payment Reminder</option>
+              <option value="custom">Custom Message</option>
+            </select>
+          </div>
+          <div class="form-group" id="customMsgGroup" style="display:none;">
+            <label class="form-label">Custom Message</label>
+            <input class="form-input" id="customMsg" placeholder="Type your message…" />
+          </div>
+          <button class="btn-sm btn-sm-green" style="height:42px;align-self:end;" onclick="sendEmail()">Send →</button>
+        </div>
+      </div>
+
+      <!-- Applications Table -->
+      <div class="applications-panel">
+        <div class="panel-header">
+          <h3>Applications</h3>
+          <div class="filter-tabs">
+            <button class="filter-tab active" onclick="filterApps('all', this)">All</button>
+            <button class="filter-tab" onclick="filterApps('pending', this)">Pending</button>
+            <button class="filter-tab" onclick="filterApps('approved', this)">Approved</button>
+            <button class="filter-tab" onclick="filterApps('rejected', this)">Rejected</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="app-table">
+            <thead>
+              <tr>
+                <th>Applicant</th>
+                <th>Platform</th>
+                <th>Followers</th>
+                <th>Applied</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="appsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────
+const ADMIN_PASSWORD = 'Nexa.2026'; // Change this to your own password
+let currentFilter = 'all';
+
+// ─── LOCAL STORAGE KEYS ──────────────────────────────────
+const LS_APPS = 'nexa_applications';
+const LS_INFLUENCERS = 'nexa_influencers';
+const LS_CODES = 'nexa_codes';
+
+// ─── HELPERS ─────────────────────────────────────────────
+function getApps()        { return JSON.parse(localStorage.getItem(LS_APPS) || '[]'); }
+function saveApps(d)      { localStorage.setItem(LS_APPS, JSON.stringify(d)); }
+function getInfluencers() { return JSON.parse(localStorage.getItem(LS_INFLUENCERS) || '[]'); }
+function saveInfluencers(d){ localStorage.setItem(LS_INFLUENCERS, JSON.stringify(d)); }
+function getCodes()       { return JSON.parse(localStorage.getItem(LS_CODES) || '[]'); }
+function saveCodes(d)     { localStorage.setItem(LS_CODES, JSON.stringify(d)); }
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => { t.className = 'toast'; }, 3500);
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  window.scrollTo(0, 0);
+  if (name === 'admin') loadAdmin();
+}
+
+function scrollToApply() {
+  document.getElementById('apply-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── APPLICATION SUBMIT ──────────────────────────────────
+function submitApplication(e) {
+  e.preventDefault();
+  const btn = document.getElementById('applyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  const apps = getApps();
+  const email = document.getElementById('app-email').value.trim().toLowerCase();
+
+  if (apps.find(a => a.email === email)) {
+    showToast('An application with this email already exists.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Submit Application →';
+    return;
+  }
+
+  const app = {
+    id: uid(),
+    full_name: document.getElementById('app-name').value.trim(),
+    email,
+    phone: document.getElementById('app-phone').value.trim(),
+    social_handle: document.getElementById('app-handle').value.trim(),
+    platform: document.getElementById('app-platform').value,
+    follower_count: parseInt(document.getElementById('app-followers').value) || 0,
+    profile_link: document.getElementById('app-link').value.trim(),
+    reason: document.getElementById('app-reason').value.trim(),
+    status: 'pending',
+    created_at: new Date().toISOString()
+  };
+
+  apps.push(app);
+  saveApps(apps);
+
+  document.getElementById('applyForm').reset();
+  btn.disabled = false;
+  btn.textContent = 'Submit Application →';
+  showToast('🎉 Application submitted! We\'ll be in touch within 48 hours.');
+}
+
+// ─── ADMIN AUTH ──────────────────────────────────────────
+function adminLogin() {
+  const pwd = document.getElementById('adminPasswordInput').value;
+  if (pwd === ADMIN_PASSWORD) {
+    sessionStorage.setItem('nexa_admin', '1');
+    document.getElementById('adminPasswordInput').value = '';
+    showPage('admin');
+  } else {
+    showToast('Incorrect password.', 'error');
+  }
+}
+
+function adminLogout() {
+  sessionStorage.removeItem('nexa_admin');
+  showPage('landing');
+}
+
+function requireAdmin() {
+  if (!sessionStorage.getItem('nexa_admin')) {
+    showPage('login');
+    return false;
+  }
+  return true;
+}
+
+// ─── ADMIN LOAD ──────────────────────────────────────────
+function loadAdmin() {
+  if (!requireAdmin()) return;
+  renderStats();
+  renderAppsTable(currentFilter);
+  populateEmailRecipients();
+}
+
+function renderStats() {
+  const apps = getApps();
+  const influencers = getInfluencers();
+  const codes = getCodes();
+  const pending  = apps.filter(a => a.status === 'pending').length;
+  const approved = apps.filter(a => a.status === 'approved').length;
+  const rejected = apps.filter(a => a.status === 'rejected').length;
+
+  document.getElementById('adminStats').innerHTML = `
+    <div class="admin-stat-card"><div class="num">${apps.length}</div><div class="lbl">Total Applications</div></div>
+    <div class="admin-stat-card"><div class="num" style="color:#f59e0b">${pending}</div><div class="lbl">Pending</div></div>
+    <div class="admin-stat-card"><div class="num">${approved}</div><div class="lbl">Approved</div></div>
+    <div class="admin-stat-card"><div class="num" style="color:#e53e3e">${rejected}</div><div class="lbl">Rejected</div></div>
+    <div class="admin-stat-card"><div class="num">${influencers.length}</div><div class="lbl">Active Influencers</div></div>
+    <div class="admin-stat-card"><div class="num">${codes.length}</div><div class="lbl">Referral Codes</div></div>
+  `;
+}
+
+function renderAppsTable(filter = 'all') {
+  currentFilter = filter;
+  let apps = getApps();
+  if (filter !== 'all') apps = apps.filter(a => a.status === filter);
+
+  const tbody = document.getElementById('appsTableBody');
+  if (!apps.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📭</div><p>No applications ${filter !== 'all' ? 'with status "' + filter + '"' : 'yet'}.</p></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = apps.map(a => `
+    <tr>
+      <td>
+        <strong>${a.full_name}</strong><br>
+        <span style="color:var(--ink3);font-size:.8rem;">${a.email}</span>
+      </td>
+      <td>${a.platform}</td>
+      <td>${a.follower_count ? a.follower_count.toLocaleString() + '+' : '—'}</td>
+      <td style="font-size:.8rem;color:var(--ink3);">${new Date(a.created_at).toLocaleDateString()}</td>
+      <td><span class="badge badge-${a.status}">${a.status}</span></td>
+      <td>
+        <div class="action-btns">
+          ${a.status !== 'approved' ? `<button class="act-btn act-approve" onclick="approveApp('${a.id}')">Approve</button>` : ''}
+          ${a.status !== 'rejected' ? `<button class="act-btn act-reject" onclick="rejectApp('${a.id}')">Reject</button>` : ''}
+          <button class="act-btn act-delete" onclick="deleteApp('${a.id}')">Delete</button>
+          <button class="act-btn" style="background:#f0faf6;color:var(--g1);" onclick="viewReason('${a.id}')">Reason</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterApps(filter, btn) {
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAppsTable(filter);
+}
+
+// ─── APP ACTIONS ─────────────────────────────────────────
+function approveApp(id) {
+  const apps = getApps();
+  const app = apps.find(a => a.id === id);
+  if (!app) return;
+  if (app.status === 'approved') { showToast('Already approved.', 'error'); return; }
+
+  app.status = 'approved';
+  app.approved_at = new Date().toISOString();
+  saveApps(apps);
+
+  // Create influencer entry
+  const influencers = getInfluencers();
+  if (!influencers.find(i => i.email === app.email)) {
+    influencers.push({
+      id: uid(),
+      application_id: app.id,
+      full_name: app.full_name,
+      email: app.email,
+      phone: app.phone,
+      social_handle: app.social_handle,
+      platform: app.platform,
+      profile_link: app.profile_link,
+      follower_count: app.follower_count,
+      total_earnings: 0,
+      referral_count: 0,
+      conversion_rate: 0,
+      payment_info: null,
+      created_at: new Date().toISOString()
+    });
+    saveInfluencers(influencers);
+  }
+
+  // Send magic link via Supabase Auth
+  sendMagicLink(app.email)
+    .then(err => {
+      if (err) {
+        console.warn('Magic link error (check Supabase config):', err.message);
+        showToast(`✅ ${app.full_name} approved. (Magic link: check Supabase config)`, 'success');
+      } else {
+        showToast(`✅ ${app.full_name} approved — magic link sent to ${app.email}`, 'success');
+      }
+    })
+    .catch(() => {
+      showToast(`✅ ${app.full_name} approved. Configure Supabase to send magic links.`, 'success');
+    });
+
+  loadAdmin();
+}
+
+function rejectApp(id) {
+  if (!confirm('Reject this application?')) return;
+  const apps = getApps();
+  const app = apps.find(a => a.id === id);
+  if (app) { app.status = 'rejected'; saveApps(apps); }
+  showToast('Application rejected.');
+  loadAdmin();
+}
+
+function deleteApp(id) {
+  if (!confirm('Permanently delete this application?')) return;
+  const apps = getApps().filter(a => a.id !== id);
+  saveApps(apps);
+  showToast('Application deleted.');
+  loadAdmin();
+}
+
+function viewReason(id) {
+  const app = getApps().find(a => a.id === id);
+  if (app) alert(`Reason from ${app.full_name}:\n\n"${app.reason || '(none provided)'}"`);
+}
+
+// ─── CODE GENERATION ─────────────────────────────────────
+function generateCodesForAll() {
+  if (!requireAdmin()) return;
+  const influencers = getInfluencers();
+  if (!influencers.length) { showToast('No approved influencers yet.', 'error'); return; }
+  if (!confirm(`Generate 2 referral codes for each of the ${influencers.length} influencers?`)) return;
+
+  const codes = getCodes();
+  let newCount = 0;
+
+  influencers.forEach(inf => {
+    for (let i = 0; i < 2; i++) {
+      const base = (inf.social_handle || inf.full_name).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'NEXA';
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      const codeStr = `${base}${rand}`;
+      if (!codes.find(c => c.code === codeStr)) {
+        codes.push({
+          id: uid(),
+          influencer_id: inf.id,
+          influencer_email: inf.email,
+          influencer_name: inf.full_name,
+          code: codeStr,
+          discount: 15 + Math.floor(Math.random() * 11),
+          uses: 0,
+          active: true,
+          created_at: new Date().toISOString()
+        });
+        newCount++;
+      }
+    }
+  });
+
+  saveCodes(codes);
+  showToast(`🔑 ${newCount} new referral codes generated!`);
+  loadAdmin();
+}
+
+// ─── EMAIL PANEL ─────────────────────────────────────────
+function populateEmailRecipients() {
+  const select = document.getElementById('emailRecipient');
+  const influencers = getInfluencers();
+  select.innerHTML = '<option value="">Select approved influencer…</option>'
+    + influencers.map(i => `<option value="${i.email}">${i.full_name} (${i.email})</option>`).join('');
+}
+
+document.getElementById('emailTemplate').addEventListener('change', function() {
+  document.getElementById('customMsgGroup').style.display = this.value === 'custom' ? 'flex' : 'none';
+});
+
+function sendEmail() {
+  const to   = document.getElementById('emailRecipient').value;
+  const tmpl = document.getElementById('emailTemplate').value;
+  if (!to) { showToast('Please select a recipient.', 'error'); return; }
+
+  const templates = {
+    welcome: {
+      subject: '🎉 Welcome to NexaInfluence — You\'re Approved!',
+      body: `Your influencer application has been approved.\n\nLog in to your dashboard to view your referral codes and start earning:\nnexainfluence-dashboard.html\n\nUse your email address — a magic link will be sent to this inbox.`
+    },
+    codes: {
+      subject: '🔑 Your Referral Codes Are Ready',
+      body: `New personalised referral codes have been assigned to your account.\n\nLog in to your dashboard to copy and start sharing them.`
+    },
+    payment: {
+      subject: '💰 Add Your Payment Information',
+      body: `To receive your commissions, please log in to your NexaInfluence dashboard and add your payment details (PayPal or bank).`
+    },
+    custom: {
+      subject: 'Message from NexaInfluence',
+      body: document.getElementById('customMsg').value || '(empty message)'
+    }
+  };
+
+  const { subject, body } = templates[tmpl];
+  // In production this would call a server-side email function.
+  // For now, open mailto as a fallback so you can send manually.
+  const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(mailtoLink, '_blank');
+  showToast(`📧 Email draft opened for ${to}`);
+}
+
+// ─── EXPORT CSV ──────────────────────────────────────────
+function exportCSV() {
+  const apps = getApps();
+  if (!apps.length) { showToast('No applications to export.', 'error'); return; }
+  const headers = ['Name','Email','Phone','Platform','Followers','Handle','Status','Applied'];
+  const rows = apps.map(a => [
+    a.full_name, a.email, a.phone, a.platform,
+    a.follower_count, a.social_handle, a.status,
+    new Date(a.created_at).toLocaleDateString()
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v || ''}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'nexainfluence-applications.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 CSV downloaded.');
+}
+</script>
+</body>
+</html>

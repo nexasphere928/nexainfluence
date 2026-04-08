@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexaInfluence — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+  <style>
+    :root {
+      --g1: #01875f;
+      --g2: #00ac6d;
+      --g3: #00d48a;
+      --g-dark: #00654a;
+      --g-light: #e6f7f1;
+      --g-pale: #f0faf6;
+      --white: #ffffff;
+      --bg: #f7faf9;
+      --ink: #0d1f1a;
+      --ink2: #3a5046;
+      --ink3: #6b8a7d;
+      --border: #c8e6d8;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 2px 8px rgba(1,135,95,.08);
+      --shadow-md: 0 8px 32px rgba(1,135,95,.14);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+    /* ── SCREENS ── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── LOGIN SCREEN ── */
+    .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; background: linear-gradient(135deg, var(--g-pale), var(--g-light)); }
+    .login-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 2.5rem; width: 100%; max-width: 400px; box-shadow: var(--shadow-md); }
+    .login-logo { display: flex; align-items: center; gap: .5rem; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; color: var(--g1); margin-bottom: 2rem; }
+    .login-logo svg { width: 36px; height: 36px; }
+    .login-card h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--ink); margin-bottom: .4rem; }
+    .login-card .sub { font-size: .9rem; color: var(--ink3); margin-bottom: 1.8rem; line-height: 1.6; }
+    .form-group { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+    .form-label { font-size: .8rem; font-weight: 600; color: var(--ink2); text-transform: uppercase; letter-spacing: .04em; }
+    .form-input { padding: .75rem 1rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: .95rem; color: var(--ink); background: #fff; outline: none; transition: border-color .2s, box-shadow .2s; }
+    .form-input:focus { border-color: var(--g1); box-shadow: 0 0 0 3px rgba(1,135,95,.12); }
+    .submit-btn { width: 100%; padding: .9rem; background: var(--g1); color: #fff; border: none; border-radius: 50px; font-family: 'Syne', sans-serif; font-size: .95rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+    .submit-btn:hover:not(:disabled) { background: var(--g-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(1,135,95,.35); }
+    .submit-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .login-note { margin-top: 1.2rem; text-align: center; font-size: .82rem; color: var(--ink3); }
+    .login-note a { color: var(--g1); text-decoration: none; font-weight: 600; }
+    .magic-sent { display: none; text-align: center; padding: 1rem; background: var(--g-light); border-radius: var(--radius-sm); border: 1px solid var(--g2); margin-top: 1rem; }
+    .magic-sent p { color: var(--g-dark); font-size: .9rem; line-height: 1.6; }
+    .magic-sent .big-icon { font-size: 2rem; margin-bottom: .5rem; }
+
+    /* ── DASHBOARD HEADER ── */
+    .dash-header {
+      background: #fff; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 64px;
+    }
+    .dash-logo { display: flex; align-items: center; gap: .5rem; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--g1); }
+    .dash-logo svg { width: 28px; height: 28px; }
+    .dash-user { display: flex; align-items: center; gap: 1rem; }
+    .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--g1); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 700; font-size: .9rem; }
+    .user-name { font-size: .88rem; font-weight: 600; color: var(--ink); }
+    .user-email { font-size: .75rem; color: var(--ink3); }
+    .logout-btn { padding: .4rem 1rem; border-radius: 50px; border: 1.5px solid var(--border); background: transparent; color: var(--ink3); font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .logout-btn:hover { border-color: var(--g1); color: var(--g1); }
+
+    /* ── DASHBOARD BODY ── */
+    .dash-body { max-width: 1000px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+    /* Welcome banner */
+    .welcome-banner { background: linear-gradient(135deg, var(--g1), var(--g2)); border-radius: var(--radius); padding: 2rem 2.5rem; margin-bottom: 2rem; color: #fff; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    .welcome-banner h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; margin-bottom: .3rem; }
+    .welcome-banner p { font-size: .9rem; opacity: .85; }
+    .welcome-tag { background: rgba(255,255,255,.2); border-radius: 50px; padding: .4rem 1rem; font-size: .8rem; font-weight: 600; }
+
+    /* Stats grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.4rem; }
+    .stat-card .s-label { font-size: .75rem; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: .5rem; }
+    .stat-card .s-value { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; color: var(--ink); }
+    .stat-card .s-sub { font-size: .78rem; color: var(--ink3); margin-top: .2rem; }
+    .stat-card.highlight { border-color: var(--g2); background: var(--g-pale); }
+    .stat-card.highlight .s-value { color: var(--g1); }
+
+    /* Section cards */
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.8rem; margin-bottom: 1.5rem; }
+    .card-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--ink); margin-bottom: 1.2rem; display: flex; align-items: center; gap: .5rem; }
+
+    /* Codes list */
+    .codes-list { display: flex; flex-direction: column; gap: .8rem; }
+    .code-item { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem; padding: 1rem 1.2rem; background: var(--g-pale); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .code-badge { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800; color: var(--g1); letter-spacing: .1em; }
+    .code-meta { font-size: .8rem; color: var(--ink3); }
+    .code-discount { background: var(--g1); color: #fff; padding: .25rem .7rem; border-radius: 50px; font-size: .75rem; font-weight: 700; }
+    .copy-btn { padding: .4rem 1rem; background: var(--g1); color: #fff; border: none; border-radius: 50px; font-size: .8rem; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .copy-btn:hover { background: var(--g-dark); }
+    .no-codes { text-align: center; padding: 2rem; color: var(--ink3); font-size: .9rem; }
+
+    /* Payment form */
+    .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    @media(max-width:560px) { .payment-grid { grid-template-columns: 1fr; } }
+    .payment-grid .full { grid-column: 1 / -1; }
+    .save-btn { display: inline-flex; align-items: center; gap: .5rem; padding: .7rem 1.8rem; background: var(--g1); color: #fff; border: none; border-radius: 50px; font-family: 'Syne', sans-serif; font-size: .9rem; font-weight: 700; cursor: pointer; transition: all .2s; margin-top: .5rem; }
+    .save-btn:hover { background: var(--g-dark); }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--ink); color: #fff; padding: 1rem 1.5rem; border-radius: var(--radius-sm); font-size: .9rem; font-weight: 500; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all .35s cubic-bezier(.34,1.56,.64,1); max-width: 340px; box-shadow: var(--shadow-md); }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-left: 4px solid var(--g2); }
+    .toast.error { border-left: 4px solid #e53e3e; }
+
+    /* Loading overlay */
+    .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,.95); display: flex; align-items: center; justify-content: center; z-index: 200; flex-direction: column; gap: 1rem; }
+    .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--g1); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-overlay p { color: var(--ink3); font-size: .9rem; }
+
+    @media(max-width:640px) {
+      .dash-header { padding: 0 1rem; }
+      .dash-body { padding: 1.5rem 1rem; }
+      .welcome-banner { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p>Checking authentication…</p>
+</div>
+
+<!-- ══════════════════ LOGIN SCREEN ══════════════════ -->
+<div class="screen" id="loginScreen">
+  <div class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#01875f"/>
+          <path d="M8 20 L14 12 L18 17 L22 10 L26 16" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="8" cy="20" r="2" fill="white"/>
+        </svg>
+        NexaInfluence
+      </div>
+      <h2>Influencer Login</h2>
+      <p class="sub">Enter your email address and we'll send you a secure magic link — no password needed.</p>
+
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" id="loginEmail" type="email" placeholder="you@email.com"
+                 onkeydown="if(event.key==='Enter') requestMagicLink()" />
+        </div>
+        <button class="submit-btn" id="magicLinkBtn" onclick="requestMagicLink()">Send Magic Link →</button>
+      </div>
+
+      <div class="magic-sent" id="magicSent">
+        <div class="big-icon">📬</div>
+        <p><strong>Check your inbox!</strong><br>We've sent a magic link to <strong id="sentToEmail"></strong>.<br>Click the link in the email to access your dashboard.</p>
+        <p style="margin-top:.8rem;font-size:.78rem;color:var(--ink3);">Didn't receive it? Check spam, or <a href="#" onclick="resetLoginForm();return false;" style="color:var(--g1);">try again</a>.</p>
+      </div>
+
+      <p class="login-note">Not yet an influencer? <a href="nexainfluence.html">Apply here →</a></p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════ DASHBOARD SCREEN ══════════════════ -->
+<div class="screen" id="dashboardScreen">
+
+  <header class="dash-header">
+    <div class="dash-logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#01875f"/>
+        <path d="M8 20 L14 12 L18 17 L22 10 L26 16" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="8" cy="20" r="2" fill="white"/>
+      </svg>
+      NexaInfluence
+    </div>
+    <div class="dash-user">
+      <div>
+        <div class="user-name" id="headerName">—</div>
+        <div class="user-email" id="headerEmail">—</div>
+      </div>
+      <div class="user-avatar" id="headerAvatar">?</div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="dash-body">
+
+    <!-- Welcome banner -->
+    <div class="welcome-banner">
+      <div>
+        <h2>Welcome back, <span id="welcomeName">Influencer</span> 👋</h2>
+        <p>Here's a snapshot of your performance. Keep sharing those codes!</p>
+      </div>
+      <div class="welcome-tag" id="platformTag">—</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card highlight">
+        <div class="s-label">Total Earnings</div>
+        <div class="s-value" id="statEarnings">₦0</div>
+        <div class="s-sub">All time</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">Total Referrals</div>
+        <div class="s-value" id="statReferrals">0</div>
+        <div class="s-sub">Unique clicks tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">Conversion Rate</div>
+        <div class="s-value" id="statConversion">0%</div>
+        <div class="s-sub">Referrals → purchases</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">Active Codes</div>
+        <div class="s-value" id="statCodes">0</div>
+        <div class="s-sub">Ready to share</div>
+      </div>
+    </div>
+
+    <!-- Referral Codes -->
+    <div class="card">
+      <div class="card-title">🔑 Your Referral Codes</div>
+      <div class="codes-list" id="codesList">
+        <div class="no-codes">No referral codes assigned yet. The admin will generate them for you after approval.</div>
+      </div>
+    </div>
+
+    <!-- Payment Info -->
+    <div class="card">
+      <div class="card-title">💳 Payment Information</div>
+      <p style="font-size:.88rem;color:var(--ink3);margin-bottom:1.2rem;">Save your payment details so we can send your commissions. At least one method is required to receive payouts.</p>
+      <div class="payment-grid">
+        <div class="form-group full">
+          <label class="form-label">PayPal Email *</label>
+          <input class="form-input" id="paypalEmail" type="email" placeholder="your@paypal.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bank Name</label>
+          <input class="form-input" id="bankName" type="text" placeholder="e.g. Access Bank" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Account Number</label>
+          <input class="form-input" id="accountNumber" type="text" placeholder="0123456789" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Account Name</label>
+          <input class="form-input" id="accountName" type="text" placeholder="Full name on account" />
+        </div>
+      </div>
+      <button class="save-btn" onclick="savePaymentInfo()">💾 Save Payment Details</button>
+    </div>
+
+    <!-- Profile Summary -->
+    <div class="card">
+      <div class="card-title">👤 Your Profile</div>
+      <div id="profileDetails" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="card" style="background:var(--g-pale);border-color:var(--border);">
+      <div class="card-title">💡 How to Earn</div>
+      <ol style="padding-left:1.2rem;display:flex;flex-direction:column;gap:.7rem;color:var(--ink2);font-size:.9rem;line-height:1.6;">
+        <li>Copy one of your referral codes above.</li>
+        <li>Share it on your social media, bio links, or Stories.</li>
+        <li>When someone uses your code at checkout on NexaSphere, they get a discount — and you earn a commission.</li>
+        <li>Earnings are tracked in your dashboard and paid out monthly to your saved payment method.</li>
+      </ol>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let currentUser = null;   // Supabase auth user
+let influencerData = null; // localStorage influencer record
+
+// ─── LOCAL STORAGE ───────────────────────────────────────
+const LS_INFLUENCERS = 'nexa_influencers';
+const LS_CODES = 'nexa_codes';
+
+function getInfluencers() { return JSON.parse(localStorage.getItem(LS_INFLUENCERS) || '[]'); }
+function saveInfluencers(d) { localStorage.setItem(LS_INFLUENCERS, JSON.stringify(d)); }
+function getCodes() { return JSON.parse(localStorage.getItem(LS_CODES) || '[]'); }
+
+// ─── HELPERS ─────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => { t.className = 'toast'; }, 3500);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+// ─── AUTH INIT ───────────────────────────────────────────
+// Called on page load — checks if user is already logged in
+// (Supabase restores session from the URL hash after magic link click)
+window.addEventListener('DOMContentLoaded', async () => {
+  // Let Supabase process the URL hash (magic link token)
+  await new Promise(r => setTimeout(r, 400));
+
+  const session = await getSession();
+  if (session && session.user) {
+    await initDashboard(session.user);
+  } else {
+    hideLoading();
+    showScreen('loginScreen');
+  }
+
+  // Listen for future auth changes (e.g., magic link click in same tab)
+  onAuthStateChange(async (session) => {
+    if (session && session.user) {
+      await initDashboard(session.user);
+    }
+  });
+});
+
+// ─── MAGIC LINK REQUEST ──────────────────────────────────
+async function requestMagicLink() {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  if (!email) { showToast('Please enter your email address.', 'error'); return; }
+
+  // Check the influencer is actually approved
+  const influencers = getInfluencers();
+  const match = influencers.find(i => i.email === email);
+  if (!match) {
+    showToast('No approved influencer account found for that email.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('magicLinkBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  const error = await sendMagicLink(email);
+  btn.disabled = false;
+  btn.textContent = 'Send Magic Link →';
+
+  if (error) {
+    showToast('Could not send magic link. Check your Supabase setup.', 'error');
+    console.error(error);
+    return;
+  }
+
+  document.getElementById('sentToEmail').textContent = email;
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('magicSent').style.display = 'block';
+}
+
+function resetLoginForm() {
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('magicSent').style.display = 'none';
+  document.getElementById('loginEmail').value = '';
+}
+
+// ─── DASHBOARD INIT ──────────────────────────────────────
+async function initDashboard(user) {
+  currentUser = user;
+
+  const influencers = getInfluencers();
+  influencerData = influencers.find(i => i.email === user.email.toLowerCase());
+
+  if (!influencerData) {
+    // Logged in via Supabase but no matching local influencer record
+    // (shouldn't happen normally — admin creates the record on approval)
+    hideLoading();
+    showScreen('loginScreen');
+    showToast('Your account isn\'t linked yet. Contact the admin.', 'error');
+    await signOut();
+    return;
+  }
+
+  hideLoading();
+  populateDashboard();
+  showScreen('dashboardScreen');
+}
+
+// ─── POPULATE DASHBOARD ──────────────────────────────────
+function populateDashboard() {
+  const inf = influencerData;
+  const firstName = inf.full_name.split(' ')[0];
+  const initials = inf.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  // Header
+  document.getElementById('headerName').textContent = inf.full_name;
+  document.getElementById('headerEmail').textContent = inf.email;
+  document.getElementById('headerAvatar').textContent = initials;
+
+  // Welcome
+  document.getElementById('welcomeName').textContent = firstName;
+  document.getElementById('platformTag').textContent = inf.platform || 'Influencer';
+
+  // Stats
+  document.getElementById('statEarnings').textContent = '₦' + (inf.total_earnings || 0).toLocaleString();
+  document.getElementById('statReferrals').textContent = inf.referral_count || 0;
+  document.getElementById('statConversion').textContent = (inf.conversion_rate || 0) + '%';
+
+  // Codes
+  const allCodes = getCodes();
+  const myCodes = allCodes.filter(c => c.influencer_email === inf.email && c.active);
+  document.getElementById('statCodes').textContent = myCodes.length;
+  renderCodes(myCodes);
+
+  // Payment info
+  if (inf.payment_info) {
+    document.getElementById('paypalEmail').value = inf.payment_info.paypal_email || '';
+    document.getElementById('bankName').value = inf.payment_info.bank_name || '';
+    document.getElementById('accountNumber').value = inf.payment_info.account_number || '';
+    document.getElementById('accountName').value = inf.payment_info.account_name || '';
+  }
+
+  // Profile
+  renderProfile(inf);
+}
+
+function renderCodes(codes) {
+  const container = document.getElementById('codesList');
+  if (!codes.length) {
+    container.innerHTML = '<div class="no-codes">No referral codes assigned yet. The admin will generate them for you shortly.</div>';
+    return;
+  }
+  container.innerHTML = codes.map(c => `
+    <div class="code-item">
+      <div>
+        <div class="code-badge">${c.code}</div>
+        <div class="code-meta">${c.uses || 0} uses · Added ${new Date(c.created_at).toLocaleDateString()}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+        <span class="code-discount">${c.discount}% OFF</span>
+        <button class="copy-btn" onclick="copyCode('${c.code}', this)">Copy Code</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyCode(code, btn) {
+  navigator.clipboard.writeText(code).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.style.background = 'var(--g-dark)';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+    showToast(`Code "${code}" copied to clipboard!`);
+  }).catch(() => {
+    showToast('Could not copy — try selecting the code manually.', 'error');
+  });
+}
+
+function renderProfile(inf) {
+  const fields = [
+    ['Full Name', inf.full_name],
+    ['Email', inf.email],
+    ['Platform', inf.platform],
+    ['Social Handle', inf.social_handle],
+    ['Follower Count', inf.follower_count ? inf.follower_count.toLocaleString() + '+' : '—'],
+    ['Member Since', new Date(inf.created_at).toLocaleDateString()],
+  ];
+  document.getElementById('profileDetails').innerHTML = fields.map(([label, val]) => `
+    <div>
+      <div style="font-size:.75rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.25rem;">${label}</div>
+      <div style="font-size:.9rem;color:var(--ink);font-weight:500;">${val || '—'}</div>
+    </div>
+  `).join('');
+}
+
+// ─── SAVE PAYMENT INFO ───────────────────────────────────
+function savePaymentInfo() {
+  const paypal = document.getElementById('paypalEmail').value.trim();
+  if (!paypal) { showToast('PayPal email is required to receive payments.', 'error'); return; }
+
+  influencerData.payment_info = {
+    paypal_email: paypal,
+    bank_name: document.getElementById('bankName').value.trim(),
+    account_number: document.getElementById('accountNumber').value.trim(),
+    account_name: document.getElementById('accountName').value.trim(),
+  };
+
+  const influencers = getInfluencers();
+  const idx = influencers.findIndex(i => i.email === influencerData.email);
+  if (idx !== -1) {
+    influencers[idx] = influencerData;
+    saveInfluencers(influencers);
+    showToast('💳 Payment details saved successfully!');
+  }
+}
+
+// ─── LOGOUT ──────────────────────────────────────────────
+async function logout() {
+  await signOut();
+  currentUser = null;
+  influencerData = null;
+  showScreen('loginScreen');
+  resetLoginForm();
+  showToast('You have been signed out.');
+}
+</script>
+</body>
+</html>
